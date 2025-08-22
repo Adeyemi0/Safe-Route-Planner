@@ -714,31 +714,71 @@ def generate_route_map(network, result, start_lat, start_lng, end_lat, end_lng):
             popup=f"High Risk Area (Safest): {point['risk']:.2f}"
         ).add_to(m)
     
-    # Add start marker
+    # Add start marker (blue)
     folium.Marker(
         [start_lat, start_lng], 
         popup='Start Location', 
         icon=folium.Icon(color='blue', icon='play')
     ).add_to(m)
     
-    # Add end marker
+    # Add end marker (red)
     folium.Marker(
         [end_lat, end_lng], 
         popup='Destination', 
         icon=folium.Icon(color='red', icon='stop')
     ).add_to(m)
     
-    # Add legend
+    # Enhanced legend with better styling and clearer icons
     legend_html = '''
     <div style="position: fixed; 
-                bottom: 50px; left: 50px; width: 200px; height: 120px; 
-                background-color: white; border:2px solid grey; z-index:9999; 
-                font-size:14px; padding: 10px">
-    <b>Route Legend</b><br>
-    <i class="fa fa-minus" style="color:red"></i> Fastest Route<br>
-    <i class="fa fa-minus" style="color:green"></i> Safest Route<br>
-    <i class="fa fa-circle" style="color:red"></i> High Risk (Fastest)<br>
-    <i class="fa fa-circle" style="color:orange"></i> High Risk (Safest)
+                top: 10px; right: 10px; width: 220px; height: auto; 
+                background-color: white; border: 2px solid #ccc; z-index: 9999; 
+                font-size: 13px; padding: 15px; border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        <div style="font-weight: bold; margin-bottom: 10px; color: #333; font-size: 14px;">
+            🗺️ Route Legend
+        </div>
+        
+        <!-- Routes -->
+        <div style="margin-bottom: 8px;">
+            <span style="display: inline-block; width: 20px; height: 3px; background-color: red; margin-right: 8px; vertical-align: middle;"></span>
+            <span style="color: #333;">Fastest Route</span>
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <span style="display: inline-block; width: 20px; height: 3px; background-color: green; margin-right: 8px; vertical-align: middle;"></span>
+            <span style="color: #333;">Safest Route</span>
+        </div>
+        
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+        
+        <!-- Markers -->
+        <div style="margin-bottom: 8px;">
+            <span style="display: inline-block; width: 12px; height: 12px; background-color: #4285f4; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>
+            <span style="color: #333;">Start Location</span>
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <span style="display: inline-block; width: 12px; height: 12px; background-color: #ea4335; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>
+            <span style="color: #333;">Destination</span>
+        </div>
+        
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+        
+        <!-- Risk Areas -->
+        <div style="margin-bottom: 8px;">
+            <span style="display: inline-block; width: 10px; height: 10px; background-color: red; border-radius: 50%; margin-right: 10px; vertical-align: middle;"></span>
+            <span style="color: #333;">High Risk (Fastest)</span>
+        </div>
+        
+        <div style="margin-bottom: 5px;">
+            <span style="display: inline-block; width: 10px; height: 10px; background-color: orange; border-radius: 50%; margin-right: 10px; vertical-align: middle;"></span>
+            <span style="color: #333;">High Risk (Safest)</span>
+        </div>
+        
+        <div style="margin-top: 10px; font-size: 11px; color: #666; font-style: italic;">
+            Click on routes and markers for details
+        </div>
     </div>
     '''
     m.get_root().html.add_child(folium.Element(legend_html))
@@ -756,6 +796,13 @@ def get_route():
         start_address = data.get('start', '').strip()
         end_address = data.get('end', '').strip()
         risk_weight = data.get('risk_weight', 0.5)  # Default to balanced approach
+        
+        if not start_address or not end_address:
+            return jsonify({'error': 'Please provide both start and end addresses'}), 400
+        
+        # Geocode addresses with rate limiting
+        print(f"Geocoding start address: {start_address}")
+        start_lat, start_lng = get_lat_lng(start_address)
         
         if not start_lat or not start_lng:
             return jsonify({'error': f'Could not find location for start address: {start_address}'}), 400
@@ -807,7 +854,7 @@ def get_route():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
-
+        
 if __name__ == '__main__':
     app.run(debug=True)_address or not end_address:
             return jsonify({'error': 'Please provide both start and end addresses'}), 400
