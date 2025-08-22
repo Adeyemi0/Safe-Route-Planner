@@ -76,8 +76,6 @@ The application will be available at `http://localhost:5000`
 ```
 safe-route-planner/
 ├── app.py              # Main Flask application
-├── .env                # Environment variables (not in git)
-├── .env.example        # Environment variables template
 ├── .gitignore          # Git ignore file
 ├── requirements.txt    # Python dependencies
 ├── README.md          # This file
