@@ -33,11 +33,6 @@ Create a `.env` file in the root directory:
 cp .env.example .env
 ```
 
-Edit the `.env` file and add your Google Maps API key:
-
-```
-GOOGLE_MAPS_API_KEY=your_actual_api_key_here
-```
 
 ### 4. Prepare Data Files
 
