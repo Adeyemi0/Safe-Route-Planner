@@ -97,6 +97,14 @@ safe-route-planner/
 
 ## License
 
+This project is licensed under the GNU General Public License v3.0.
+
+### GPL v3 Summary:
+- ✅ Commercial use allowed
+- ✅ Modification allowed
+- ✅ Distribution allowed
+- ⚠️ Must disclose source code
+- ⚠️ Same license required for derivatives
 
 
 ## Contact
