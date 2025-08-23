@@ -856,7 +856,7 @@ def get_route():
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
         
 if __name__ == '__main__':
-    app.run(debug=True)_address or not end_address:
+    app.run(host='0.0.0.0', debug=True)_address or not end_address:
             return jsonify({'error': 'Please provide both start and end addresses'}), 400
         
         # Geocode addresses with rate limiting
