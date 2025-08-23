@@ -1,47 +1,19 @@
-# Environment Variables
+# Never commit the built HTML file with real API keys
+index.html
+
+# Environment files
 .env
 .env.local
-.env.development
-.env.test
 .env.production
+*.env
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Node.js dependencies (if you add any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Virtual Environment
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -50,10 +22,21 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # Logs
-*.log
 logs/
+*.log
 
 # Temporary files
-*.tmp
-*.temp
+tmp/
+temp/
+
+# Build artifacts (if you add a build process later)
+dist/
+build/
