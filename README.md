@@ -21,7 +21,7 @@ A Flask (& streamlit) web application that finds the safest routes between locat
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Adeyemi0/Safe-Route-Planner/edit/main/README.md
+git clone https://github.com/Adeyemi0/Safe-Route-Planner
 cd safe-route-planner
 ```
 
