@@ -1,7 +1,7 @@
 streamlit
 streamlit-folium
-networkx
-osmnx
+networkx>=2.8
+osmnx>=1.6.0
 folium
 geopy
 pandas
@@ -12,4 +12,4 @@ matplotlib
 geopandas
 pickle-mixin
 scipy
-scikit-learn
+scikit-learn>=1.0.0
