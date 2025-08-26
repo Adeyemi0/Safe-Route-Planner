@@ -12,3 +12,4 @@ matplotlib
 geopandas
 pickle-mixin
 scipy
+scikit-learn
