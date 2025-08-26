@@ -1,6 +1,6 @@
 # Safe Route Planner - Leeds & Birmingham
 
-A Flask (& streamlit) web application that finds the safest routes between locations in Leeds and Birmingham using risk analysis and route optimization.
+A Flask (& streamlit) web application that finds the safest routes between locations in Leeds and Birmingham using accident crash risk analysis and route optimization.
 
 ## Flask Demo
 ![Route Planning Demo](rout_flask.gif)
