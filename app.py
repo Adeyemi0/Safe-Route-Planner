@@ -9,10 +9,10 @@ import osmnx as ox
 import time
 import numpy as np
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # Add this import
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv()  # Add this line
 
 app = Flask(__name__)
 
@@ -399,13 +399,19 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# Get API key from environment variable
+# Initialize Google Geocoder
 api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
+# Debug: Check if API key is loaded
 if not api_key:
-    raise ValueError("GOOGLE_MAPS_API_KEY environment variable is not set!")
+    print("ERROR: GOOGLE_MAPS_API_KEY not found in environment variables!")
+    print("Current working directory:", os.getcwd())
+    print("Files in current directory:", os.listdir('.'))
+    print("Environment variables containing 'GOOGLE':", {k: v for k, v in os.environ.items() if 'GOOGLE' in k})
+    raise ValueError("GOOGLE_MAPS_API_KEY not found. Please check your .env file.")
+else:
+    print(f"API key loaded successfully: {api_key[:10]}...")  # Only show first 10 characters for security
 
-# Initialize Google Geocoder
 geolocator = GoogleV3(api_key=api_key, timeout=10)
 
 # Load precomputed data at startup
@@ -488,7 +494,7 @@ def is_in_supported_area(lat, lng):
 
 def calculate_route_improved(network, origin, destination, risk_weight=0.5):
     """
-    Improved route calculation with better weight function and type safety
+    Improved route calculation with network connectivity handling
     """
     # Find nearest nodes
     orig_node = ox.distance.nearest_nodes(network, origin[1], origin[0])
@@ -496,6 +502,65 @@ def calculate_route_improved(network, origin, destination, risk_weight=0.5):
     
     print(f"Origin node: {orig_node}, Destination node: {dest_node}")
     print(f"Risk weight: {risk_weight}")
+    
+    # Check if nodes are in the same connected component
+    if not nx.has_path(network, orig_node, dest_node):
+        print("No direct path found. Attempting to find alternative nodes...")
+        
+        # Get all nodes within a reasonable distance from origin and destination
+        orig_candidates = ox.distance.nearest_nodes(network, 
+                                                   [origin[1]] * 5, 
+                                                   [origin[0]] * 5, 
+                                                   return_dist=True)
+        dest_candidates = ox.distance.nearest_nodes(network, 
+                                                   [destination[1]] * 5, 
+                                                   [destination[0]] * 5, 
+                                                   return_dist=True)
+        
+        # Find the largest connected component
+        largest_cc = max(nx.connected_components(network.to_undirected()), key=len)
+        print(f"Largest connected component has {len(largest_cc)} nodes")
+        
+        # Find nearest nodes that are in the largest connected component
+        orig_node = None
+        dest_node = None
+        
+        # Search for origin node in connected component
+        for candidate in orig_candidates[0] if isinstance(orig_candidates[0], list) else [orig_candidates[0]]:
+            if candidate in largest_cc:
+                orig_node = candidate
+                break
+        
+        # Search for destination node in connected component
+        for candidate in dest_candidates[0] if isinstance(dest_candidates[0], list) else [dest_candidates[0]]:
+            if candidate in largest_cc:
+                dest_node = candidate
+                break
+        
+        if orig_node is None or dest_node is None:
+            # Fallback: find any nodes in the largest connected component near the points
+            import numpy as np
+            
+            # Get nodes in largest component with their coordinates
+            cc_nodes = list(largest_cc)
+            cc_coords = [(network.nodes[node]['y'], network.nodes[node]['x']) for node in cc_nodes]
+            
+            # Find closest nodes in connected component
+            if orig_node is None:
+                distances = [geodesic((origin[0], origin[1]), coord).meters for coord in cc_coords]
+                min_idx = np.argmin(distances)
+                orig_node = cc_nodes[min_idx]
+                print(f"Using alternative origin node: {orig_node} (distance: {distances[min_idx]:.0f}m)")
+            
+            if dest_node is None:
+                distances = [geodesic((destination[0], destination[1]), coord).meters for coord in cc_coords]
+                min_idx = np.argmin(distances)
+                dest_node = cc_nodes[min_idx]
+                print(f"Using alternative destination node: {dest_node} (distance: {distances[min_idx]:.0f}m)")
+    
+    # Verify we now have a valid path
+    if not nx.has_path(network, orig_node, dest_node):
+        raise ValueError("Cannot find any connected path between the locations. The road network may be incomplete in this area.")
     
     def safe_numeric_conversion(value, default=0):
         """Safely convert value to float, handling strings and other types"""
@@ -714,73 +779,75 @@ def generate_route_map(network, result, start_lat, start_lng, end_lat, end_lng):
             popup=f"High Risk Area (Safest): {point['risk']:.2f}"
         ).add_to(m)
     
-    # Add start marker (blue)
+    # Add start marker
     folium.Marker(
         [start_lat, start_lng], 
         popup='Start Location', 
         icon=folium.Icon(color='blue', icon='play')
     ).add_to(m)
     
-    # Add end marker (red)
+    # Add end marker
     folium.Marker(
         [end_lat, end_lng], 
         popup='Destination', 
         icon=folium.Icon(color='red', icon='stop')
     ).add_to(m)
     
-    # Enhanced legend with better styling and clearer icons
+    # Add improved legend with proper styling and visual elements
     legend_html = '''
     <div style="position: fixed; 
-                top: 10px; right: 10px; width: 220px; height: auto; 
-                background-color: white; border: 2px solid #ccc; z-index: 9999; 
-                font-size: 13px; padding: 15px; border-radius: 8px;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #333; font-size: 14px;">
+                top: 20px; right: 20px; width: 280px; height: auto; 
+                max-height: 400px; 
+                background-color: rgba(255, 255, 255, 0.95); 
+                border: 2px solid #333; 
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                z-index: 9999; 
+                font-size: 13px; 
+                padding: 15px;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                overflow-y: auto;">
+    
+        <div style="font-weight: bold; font-size: 16px; margin-bottom: 12px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 8px; position: sticky; top: 0; background-color: rgba(255, 255, 255, 0.95); z-index: 10;">
             🗺️ Route Legend
         </div>
         
-        <!-- Routes -->
+        <!-- Route Lines -->
         <div style="margin-bottom: 8px;">
-            <span style="display: inline-block; width: 20px; height: 3px; background-color: red; margin-right: 8px; vertical-align: middle;"></span>
-            <span style="color: #333;">Fastest Route</span>
+            <span style="display: inline-block; width: 20px; height: 4px; background-color: red; margin-right: 8px; vertical-align: middle;"></span>
+            <span style="color: #333; font-weight: 500;">Fastest Route</span>
+            <span style="color: #666; font-size: 11px; margin-left: 5px;">(Speed Optimized)</span>
+        </div>
+        
+        <div style="margin-bottom: 12px;">
+            <span style="display: inline-block; width: 20px; height: 4px; background-color: green; margin-right: 8px; vertical-align: middle;"></span>
+            <span style="color: #333; font-weight: 500;">Safest Route</span>
+            <span style="color: #666; font-size: 11px; margin-left: 5px;">(Risk Optimized)</span>
+        </div>
+        
+        <!-- Divider -->
+        <div style="border-top: 1px solid #eee; margin: 12px 0;"></div>
+        
+        <!-- Location Markers -->
+        <div style="margin-bottom: 8px;">
+            <span style="color: #007cff; font-size: 14px; margin-right: 8px; vertical-align: middle;">▶️</span>
+            <span style="color: #333; font-weight: 500;">Start Location</span>
         </div>
         
         <div style="margin-bottom: 8px;">
-            <span style="display: inline-block; width: 20px; height: 3px; background-color: green; margin-right: 8px; vertical-align: middle;"></span>
-            <span style="color: #333;">Safest Route</span>
+            <span style="color: #ff0000; font-size: 14px; margin-right: 8px; vertical-align: middle;">⏹️</span>
+            <span style="color: #333; font-weight: 500;">Destination</span>
         </div>
         
-        <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
-        
-        <!-- Markers -->
-        <div style="margin-bottom: 8px;">
-            <span style="display: inline-block; width: 12px; height: 12px; background-color: #4285f4; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>
-            <span style="color: #333;">Start Location</span>
+        <!-- Info note -->
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; font-size: 11px; color: #666; font-style: italic;">
+            💡 Click on routes and markers for more details
         </div>
         
-        <div style="margin-bottom: 8px;">
-            <span style="display: inline-block; width: 12px; height: 12px; background-color: #ea4335; border-radius: 50%; margin-right: 8px; vertical-align: middle;"></span>
-            <span style="color: #333;">Destination</span>
-        </div>
-        
-        <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
-        
-        <!-- Risk Areas -->
-        <div style="margin-bottom: 8px;">
-            <span style="display: inline-block; width: 10px; height: 10px; background-color: red; border-radius: 50%; margin-right: 10px; vertical-align: middle;"></span>
-            <span style="color: #333;">High Risk (Fastest)</span>
-        </div>
-        
-        <div style="margin-bottom: 5px;">
-            <span style="display: inline-block; width: 10px; height: 10px; background-color: orange; border-radius: 50%; margin-right: 10px; vertical-align: middle;"></span>
-            <span style="color: #333;">High Risk (Safest)</span>
-        </div>
-        
-        <div style="margin-top: 10px; font-size: 11px; color: #666; font-style: italic;">
-            Click on routes and markers for details
-        </div>
     </div>
     '''
+    
+    # Add the legend to the map
     m.get_root().html.add_child(folium.Element(legend_html))
     
     return m._repr_html_()
@@ -854,6 +921,6 @@ def get_route():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
-        
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(debug=True)
