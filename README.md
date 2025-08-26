@@ -75,6 +75,8 @@ The application will be available at `http://localhost:5000` for flask and `http
 safe-route-planner/
 ├── app.py              # Main Flask application
 ├── streamlit_app.py
+├── rout_flask.gif
+├── route_streamlit.gif 
 ├── .gitignore          # Git ignore file
 ├── requirements.txt    # Python dependencies for the streamlit app
 ├── README.md          # This file
