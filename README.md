@@ -1,6 +1,6 @@
 # Safe Route Planner - Leeds & Birmingham
 
-A Flask web application that finds the safest routes between locations in Leeds and Birmingham using risk analysis and route optimization.
+A Flask (& streamlit) web application that finds the safest routes between locations in Leeds and Birmingham using risk analysis and route optimization.
 
 ## Features
 
@@ -49,7 +49,7 @@ Ensure you have the following data files in the `data/` directory:
 python app.py
 ```
 
-The application will be available at `http://localhost:5000`
+The application will be available at `http://localhost:5000` for flask and `http://localhost:8501` for streamlit
 
 ## Getting a Google Maps API Key
 
@@ -71,8 +71,9 @@ The application will be available at `http://localhost:5000`
 ```
 safe-route-planner/
 ├── app.py              # Main Flask application
+├── streamlit_app.py
 ├── .gitignore          # Git ignore file
-├── requirements.txt    # Python dependencies
+├── requirements.txt    # Python dependencies for the streamlit app
 ├── README.md          # This file
 └── data/              # Data files directory
     ├── risk_grid.pkl
