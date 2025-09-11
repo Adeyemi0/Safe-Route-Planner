@@ -26,14 +26,14 @@ st.set_page_config(
 # Custom CSS for background and styling
 st.markdown("""
 <style>
-    /* Main background gradient */
+    /* Main background gradient - updated to softer tones */
     .main > div {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         min-height: 100vh;
     }
     
     .stApp {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
     
     /* Header styling */
@@ -185,7 +185,7 @@ def get_geolocator():
     if not api_key:
         st.error("ERROR: GOOGLE_MAPS_API_KEY not found in environment variables!")
         st.error(f"Current working directory: {os.getcwd()}")
-        st.error(f"Files in current directory: {os.listdir('.')}")
+        st.error(f"Files in current directory: {os.listdir('.')}") 
         st.error(f"Environment variables containing 'GOOGLE': {[k for k in os.environ.keys() if 'GOOGLE' in k]}")
         st.stop()
     
@@ -536,28 +536,19 @@ def main():
                 key="end_input"
             )
         
-        # Risk weight slider
-        risk_weight = st.slider(
-            "Route Preference",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.5,
-            step=0.1,
-            help="0.0 = Fastest Route, 1.0 = Safest Route"
-        )
-        
         # Calculate button
         if st.button("Calculate Safe Route", key="calculate_btn"):
             if not start_address or not end_address:
                 st.error('Please provide both start and end addresses')
             else:
-                calculate_route_function(start_address, end_address, risk_weight)
+                # Using fixed risk weight of 0.5 since slider is removed
+                calculate_route_function(start_address, end_address, 0.5)
         
         # Connect section
         st.markdown("""
             <div class="connect-section">
                 <p class="connect-text">Want to connect with me or learn more about this project?</p>
-                <a href="https://www.linkedin.com/in/adediran-adeyemi-17103b114/" target="_blank" class="linkedin-btn">
+                <a href="https://www.linkedin.com/in/adediran-adeyemi-17103b114/  " target="_blank" class="linkedin-btn">
                     <svg class="linkedin-icon" viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px;">
                         <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                     </svg>
