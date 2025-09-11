@@ -575,13 +575,15 @@ if submit_button:
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**Route Lines:**")
-                        st.markdown("🔴 **Red Line:** Fastest Route (Speed Optimized)")
-                        st.markdown("🟢 **Green Line:** Safest Route (Risk Optimized)")
+                        st.markdown("<span style='color:red'>━━━</span> **Red Line:** Fastest Route (Speed Optimized)", unsafe_allow_html=True)
+                        st.markdown("<span style='color:green'>━━━</span> **Green Line:** Safest Route (Risk Optimized)", unsafe_allow_html=True)
+
                     
                     with col2:
                         st.markdown("**Location Markers:**")
-                        st.markdown("🔵 **Blue Play Button:** Start Location")
-                        st.markdown("🔴 **Red Stop Button:** Destination")
+                        st.markdown("🟢▶️ **Start Location**")
+                        st.markdown("🔴⏹️ **Destination**")
+
                 
                 # Display the map
                 folium_static(route_map, width=None, height=500)
@@ -596,7 +598,7 @@ if submit_button:
 
 else:
     # Show instructions when no calculation has been performed
-    st.info("👆 Enter your start and destination addresses in the sidebar to calculate the safest route.")
+    st.info("👈 Enter your start and destination addresses in the sidebar to calculate the safest route.")
     
     st.markdown("""
     ## How it works
@@ -619,3 +621,4 @@ else:
     
     *Start by entering your addresses in the sidebar to get personalized route recommendations.*
     """)
+
