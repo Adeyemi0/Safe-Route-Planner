@@ -1,6 +1,7 @@
 import streamlit as st
 import networkx as nx
 import folium
+from streamlit_folium import folium_static
 from geopy.distance import geodesic
 from geopy.geocoders import GoogleV3
 from geopy.exc import GeocoderTimedOut, GeocoderQuotaExceeded
@@ -10,7 +11,6 @@ import time
 import numpy as np
 import os
 from dotenv import load_dotenv
-from streamlit_folium import folium_static
 
 # Load environment variables from .env file
 load_dotenv()
@@ -23,101 +23,37 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for background and styling
+# Custom CSS
 st.markdown("""
 <style>
-    /* Main background gradient - updated to softer tones */
-    .main > div {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
-    }
-    
-    .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
-    
-    /* Header styling */
-    .header {
+    .main-header {
         text-align: center;
+        padding: 2rem 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        margin-bottom: 30px;
-        padding: 20px;
-        border-radius: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: 0 0 15px 15px;
     }
     
-    .header h1 {
+    .main-header h1 {
         font-size: 2.5rem;
-        margin-bottom: 10px;
+        margin-bottom: 0.5rem;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     
-    .header p {
+    .main-header p {
         font-size: 1.1rem;
         opacity: 0.9;
+        margin: 0;
     }
     
-    /* Input panel styling */
-    .input-panel {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        margin-bottom: 30px;
-    }
-    
-    /* Results panel styling */
-    .results-panel {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        margin-bottom: 20px;
-    }
-    
-    /* Stat card styling */
-    .stat-card {
-        background: #f8f9fa;
-        padding: 20px;
+    .metric-container {
+        background: white;
+        padding: 1rem;
         border-radius: 10px;
-        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         border-left: 4px solid #667eea;
-        margin-bottom: 15px;
-    }
-    
-    .stat-card h3 {
-        color: #555;
-        font-size: 0.9rem;
-        margin-bottom: 10px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .stat-card .value {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #333;
-    }
-    
-    .stat-card .subtext {
-        font-size: 0.9rem;
-        color: #777;
-        margin-top: 5px;
-    }
-    
-    /* Connect section */
-    .connect-section {
-        text-align: center;
-        padding: 20px 0;
-        border-top: 1px solid #e1e5e9;
-        margin-top: 20px;
-    }
-    
-    .connect-text {
-        color: #666;
-        margin-bottom: 10px;
-        font-size: 14px;
+        margin: 0.5rem 0;
     }
     
     .linkedin-btn {
@@ -125,41 +61,50 @@ st.markdown("""
         align-items: center;
         gap: 8px;
         background: #0077b5;
-        color: white;
+        color: white !important;
         padding: 10px 20px;
         border-radius: 5px;
         text-decoration: none;
         font-weight: 500;
         font-size: 14px;
         transition: background-color 0.3s, transform 0.2s;
+        margin-top: 1rem;
     }
     
     .linkedin-btn:hover {
         background: #005885;
         transform: translateY(-1px);
         text-decoration: none;
-        color: white;
+        color: white !important;
     }
     
-    /* Override Streamlit default styles */
-    .stSelectbox > div > div {
-        background-color: white;
+    .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #c33;
+        margin: 20px 0;
     }
     
-    .stTextInput > div > div > input {
-        background-color: white;
+    .success-message {
+        background: #efe;
+        color: #363;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #363;
+        margin: 20px 0;
     }
     
     .stButton > button {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
+        padding: 0.5rem 2rem;
         border-radius: 8px;
-        padding: 15px 30px;
-        font-size: 16px;
         font-weight: 600;
-        width: 100%;
         transition: transform 0.2s, box-shadow 0.3s;
+        width: 100%;
     }
     
     .stButton > button:hover {
@@ -169,37 +114,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
-if 'route_calculated' not in st.session_state:
-    st.session_state.route_calculated = False
-if 'route_result' not in st.session_state:
-    st.session_state.route_result = None
-if 'map_data' not in st.session_state:
-    st.session_state.map_data = None
+# Header
+st.markdown("""
+<div class="main-header">
+    <h1>🛣️ Safe Route Planner</h1>
+    <p>Find the safest routes in Leeds & Birmingham</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Initialize Google Geocoder
 @st.cache_resource
-def get_geolocator():
+def initialize_geocoder():
     api_key = os.getenv('GOOGLE_MAPS_API_KEY')
     
     if not api_key:
-        st.error("ERROR: GOOGLE_MAPS_API_KEY not found in environment variables!")
-        st.error(f"Current working directory: {os.getcwd()}")
-        st.error(f"Files in current directory: {os.listdir('.')}") 
-        st.error(f"Environment variables containing 'GOOGLE': {[k for k in os.environ.keys() if 'GOOGLE' in k]}")
+        st.error("GOOGLE_MAPS_API_KEY not found in environment variables!")
         st.stop()
     
-    st.success(f"API key loaded successfully: {api_key[:10]}...")
     return GoogleV3(api_key=api_key, timeout=10)
 
-geolocator = get_geolocator()
+geolocator = initialize_geocoder()
 
 # Load precomputed data at startup
 @st.cache_data
 def load_cached_data():
-    data = {}
-    
     try:
+        data = {}
+        
         # Load risk grids
         data['risk_grid'] = pd.read_pickle('data/risk_grid.pkl')
         
@@ -211,27 +152,24 @@ def load_cached_data():
         data['leeds_edges'] = pd.read_pickle('data/leeds_edges.pkl')
         data['birmingham_edges'] = pd.read_pickle('data/birmingham_edges.pkl')
         
-        st.success("✅ All data files loaded successfully!")
         return data
     except Exception as e:
-        st.error(f"❌ Error loading data files: {e}")
-        st.error("Please ensure all required data files are in the 'data/' directory")
+        st.error(f"Error loading cached data: {e}")
+        st.info("Please ensure all data files are present in the 'data' directory.")
         st.stop()
 
-cached_data = load_cached_data()
+# Load data with loading indicator
+with st.spinner("Loading network data..."):
+    cached_data = load_cached_data()
 
 def get_lat_lng(address):
-    """
-    Get latitude and longitude from address using Google Geocoding API
-    """
+    """Get latitude and longitude from address using Google Geocoding API"""
     try:
-        # Add some context to help with geocoding accuracy
         if not any(city in address.lower() for city in ['leeds', 'birmingham']):
-            # If no city is specified, we'll try both and see which gives better results
+            # Try both cities
             leeds_address = f"{address}, Leeds, UK"
             birmingham_address = f"{address}, Birmingham, UK"
             
-            # Try Leeds first
             try:
                 leeds_location = geolocator.geocode(leeds_address)
                 if leeds_location:
@@ -242,7 +180,6 @@ def get_lat_lng(address):
             except:
                 pass
             
-            # Try Birmingham
             try:
                 birmingham_location = geolocator.geocode(birmingham_address)
                 if birmingham_location:
@@ -253,7 +190,6 @@ def get_lat_lng(address):
             except:
                 pass
         else:
-            # Direct geocoding if city is already specified
             location = geolocator.geocode(f"{address}, UK")
             if location:
                 return location.latitude, location.longitude
@@ -261,14 +197,14 @@ def get_lat_lng(address):
         return None, None
         
     except (GeocoderTimedOut, GeocoderQuotaExceeded) as e:
-        st.warning(f"Geocoding error for address '{address}': {e}")
+        st.error(f"Geocoding error for address '{address}': {e}")
         return None, None
     except Exception as e:
         st.error(f"Unexpected geocoding error for address '{address}': {e}")
         return None, None
 
 def is_in_supported_area(lat, lng):
-    # Define bounding boxes for Leeds and Birmingham
+    """Check if coordinates are in supported areas"""
     leeds_bbox = (53.6989675, -1.8004214, 53.9458715, -1.2903516)
     birmingham_bbox = (52.381053, -2.0336486, 52.6087058, -1.7288417)
     
@@ -279,53 +215,52 @@ def is_in_supported_area(lat, lng):
     
     return in_leeds or in_birmingham, 'leeds' if in_leeds else 'birmingham'
 
+def safe_numeric_conversion(value, default=0):
+    """Safely convert value to float, handling strings and other types"""
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return default
+    if isinstance(value, list) and value:
+        try:
+            return float(value[0])
+        except (ValueError, TypeError):
+            return default
+    return default
+
 def calculate_route_improved(network, origin, destination, risk_weight=0.5):
-    """
-    Improved route calculation with network connectivity handling
-    """
+    """Improved route calculation with network connectivity handling"""
+    
     # Find nearest nodes
     orig_node = ox.distance.nearest_nodes(network, origin[1], origin[0])
     dest_node = ox.distance.nearest_nodes(network, destination[1], destination[0])
     
     # Check if nodes are in the same connected component
     if not nx.has_path(network, orig_node, dest_node):
-        st.warning("No direct path found. Attempting to find alternative nodes...")
-        
         # Find the largest connected component
         largest_cc = max(nx.connected_components(network.to_undirected()), key=len)
         
-        # Get nodes in largest component with their coordinates
+        # Find nearest nodes that are in the largest connected component
         cc_nodes = list(largest_cc)
         cc_coords = [(network.nodes[node]['y'], network.nodes[node]['x']) for node in cc_nodes]
         
         # Find closest nodes in connected component
-        distances_orig = [geodesic((origin[0], origin[1]), coord).meters for coord in cc_coords]
-        distances_dest = [geodesic((destination[0], destination[1]), coord).meters for coord in cc_coords]
+        distances = [geodesic((origin[0], origin[1]), coord).meters for coord in cc_coords]
+        min_idx = np.argmin(distances)
+        orig_node = cc_nodes[min_idx]
         
-        orig_node = cc_nodes[np.argmin(distances_orig)]
-        dest_node = cc_nodes[np.argmin(distances_dest)]
+        distances = [geodesic((destination[0], destination[1]), coord).meters for coord in cc_coords]
+        min_idx = np.argmin(distances)
+        dest_node = cc_nodes[min_idx]
     
     # Verify we now have a valid path
     if not nx.has_path(network, orig_node, dest_node):
-        raise ValueError("Cannot find any connected path between the locations. The road network may be incomplete in this area.")
-    
-    def safe_numeric_conversion(value, default=0):
-        """Safely convert value to float, handling strings and other types"""
-        if value is None:
-            return default
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            try:
-                return float(value)
-            except ValueError:
-                return default
-        if isinstance(value, list) and value:
-            try:
-                return float(value[0])
-            except (ValueError, TypeError):
-                return default
-        return default
+        raise ValueError("Cannot find any connected path between the locations.")
     
     # Calculate fastest route (baseline)
     fastest_route = nx.shortest_path(network, orig_node, dest_node, weight='length')
@@ -358,45 +293,44 @@ def calculate_route_improved(network, origin, destination, risk_weight=0.5):
             base_time = safe_numeric_conversion(d['base_travel_time'])
         else:
             length = safe_numeric_conversion(d.get('length', 0))
-            max_speed = safe_numeric_conversion(d.get('maxspeed', 50), 50)
+            max_speed = d.get('maxspeed', 50)
+            max_speed = safe_numeric_conversion(max_speed, 50)
             speed_ms = max_speed * 1000 / 3600
             base_time = length / speed_ms if speed_ms > 0 else length / 13.89
         
         risk_score = safe_numeric_conversion(d.get('normalized_risk', 0))
         risk_penalty = 1 + (risk_weight * risk_score * 0.5)
+        total_weight = base_time * risk_penalty
         
-        return base_time * risk_penalty
+        return total_weight
     
-    # Calculate safest route
+    # Calculate safest route using risk-aware weights
     try:
         safest_route = nx.shortest_path(network, orig_node, dest_node, weight=risk_aware_weight)
-        
-        safest_time = 0
-        safest_total_risk = 0
-        
-        for i in range(len(safest_route) - 1):
-            u, v = safest_route[i], safest_route[i + 1]
-            edge_data = network.get_edge_data(u, v)
-            
-            if edge_data:
-                edge = list(edge_data.values())[0]
-                
-                if 'base_travel_time' in edge:
-                    base_time = safe_numeric_conversion(edge['base_travel_time'])
-                    safest_time += base_time
-                else:
-                    length = safe_numeric_conversion(edge.get('length', 0))
-                    speed_ms = 50 * 1000 / 3600
-                    safest_time += length / speed_ms if speed_ms > 0 else 0
-                
-                risk = safe_numeric_conversion(edge.get('normalized_risk', 0))
-                safest_total_risk += risk
-                
-    except Exception as e:
-        st.warning(f"Error calculating safest route: {e}")
+    except Exception:
         safest_route = fastest_route
-        safest_time = fastest_time
-        safest_total_risk = fastest_total_risk
+    
+    # Calculate actual travel time and risk for safest route
+    safest_time = 0
+    safest_total_risk = 0
+    
+    for i in range(len(safest_route) - 1):
+        u, v = safest_route[i], safest_route[i + 1]
+        edge_data = network.get_edge_data(u, v)
+        
+        if edge_data:
+            edge = list(edge_data.values())[0]
+            
+            if 'base_travel_time' in edge:
+                base_time = safe_numeric_conversion(edge['base_travel_time'])
+                safest_time += base_time
+            else:
+                length = safe_numeric_conversion(edge.get('length', 0))
+                speed_ms = 50 * 1000 / 3600
+                safest_time += length / speed_ms if speed_ms > 0 else 0
+            
+            risk = safe_numeric_conversion(edge.get('normalized_risk', 0))
+            safest_total_risk += risk
     
     # Calculate risk reduction
     risk_reduction = 0
@@ -440,7 +374,7 @@ def calculate_route_improved(network, origin, destination, risk_weight=0.5):
     }
 
 def generate_route_map(network, result, start_lat, start_lng, end_lat, end_lng):
-    # Create base map centered between start and end
+    """Generate Folium map with routes"""
     center_lat = (start_lat + end_lat) / 2
     center_lng = (start_lng + end_lng) / 2
     
@@ -506,174 +440,182 @@ def generate_route_map(network, result, start_lat, start_lng, end_lat, end_lng):
     
     return m
 
-# Main UI
-def main():
-    # Header
+# Sidebar for inputs
+st.sidebar.header("Route Planning")
+
+with st.sidebar.form("route_form"):
+    start_address = st.text_input(
+        "📍 Start Address", 
+        placeholder="Enter starting location (Leeds or Birmingham)",
+        help="Enter the starting point of your journey"
+    )
+    
+    end_address = st.text_input(
+        "🎯 Destination Address", 
+        placeholder="Enter destination (same city as start)",
+        help="Enter your destination"
+    )
+    
+    risk_weight = st.slider(
+        "Risk vs Speed Balance",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.5,
+        step=0.1,
+        help="0.0 = Prioritize speed, 1.0 = Prioritize safety"
+    )
+    
+    submit_button = st.form_submit_button("Calculate Safe Route")
+
+# Add LinkedIn link in sidebar
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Connect with the Developer")
+st.sidebar.markdown("""
+<a href="https://www.linkedin.com/in/adediran-adeyemi-17103b114/" target="_blank" class="linkedin-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+    </svg>
+    Connect on LinkedIn
+</a>
+""", unsafe_allow_html=True)
+
+# Main content area
+if submit_button:
+    if not start_address or not end_address:
+        st.error("Please enter both start and end addresses.")
+    else:
+        with st.spinner("Calculating optimal routes..."):
+            try:
+                # Geocode addresses
+                start_lat, start_lng = get_lat_lng(start_address)
+                
+                if not start_lat or not start_lng:
+                    st.error(f"Could not find location for start address: {start_address}")
+                    st.stop()
+                
+                time.sleep(0.1)  # Rate limiting
+                
+                end_lat, end_lng = get_lat_lng(end_address)
+                
+                if not end_lat or not end_lng:
+                    st.error(f"Could not find location for end address: {end_address}")
+                    st.stop()
+                
+                # Check if in supported area
+                start_in_area, start_city = is_in_supported_area(start_lat, start_lng)
+                end_in_area, end_city = is_in_supported_area(end_lat, end_lng)
+                
+                if not start_in_area:
+                    st.error(f"Start address is not in Leeds or Birmingham (found coordinates: {start_lat:.4f}, {start_lng:.4f})")
+                    st.stop()
+                
+                if not end_in_area:
+                    st.error(f"End address is not in Leeds or Birmingham (found coordinates: {end_lat:.4f}, {end_lng:.4f})")
+                    st.stop()
+                
+                if start_city != end_city:
+                    st.error(f"Both addresses must be in the same city. Start is in {start_city.title()}, end is in {end_city.title()}")
+                    st.stop()
+                
+                # Get appropriate network
+                if start_city == 'leeds':
+                    network = cached_data['leeds_network']
+                else:
+                    network = cached_data['birmingham_network']
+                
+                # Calculate routes
+                result = calculate_route_improved(network, (start_lat, start_lng), (end_lat, end_lng), risk_weight)
+                
+                # Display results
+                st.success(f"Route calculated successfully for {start_city.title()}!")
+                
+                # Display metrics
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <h3>🚗 Fastest Route</h3>
+                        <div style="font-size: 2rem; font-weight: bold; color: #333;">
+                            {result['fastest_time']/60:.1f}
+                        </div>
+                        <div style="color: #666;">minutes</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <h3>🛡️ Safest Route</h3>
+                        <div style="font-size: 2rem; font-weight: bold; color: #333;">
+                            {result['safest_time']/60:.1f}
+                        </div>
+                        <div style="color: #666;">{result['time_difference']/60:.1f} minutes longer</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <h3>📊 Safety Improvement</h3>
+                        <div style="font-size: 2rem; font-weight: bold; color: #333;">
+                            {result['risk_reduction']*100:.1f}%
+                        </div>
+                        <div style="color: #666;">risk reduction</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Generate and display map
+                route_map = generate_route_map(network, result, start_lat, start_lng, end_lat, end_lng)
+                
+                st.subheader("🗺️ Route Map")
+                
+                # Add legend
+                with st.expander("📖 Map Legend", expanded=True):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**Route Lines:**")
+                        st.markdown("🔴 **Red Line:** Fastest Route (Speed Optimized)")
+                        st.markdown("🟢 **Green Line:** Safest Route (Risk Optimized)")
+                    
+                    with col2:
+                        st.markdown("**Location Markers:**")
+                        st.markdown("🔵 **Blue Play Button:** Start Location")
+                        st.markdown("🔴 **Red Stop Button:** Destination")
+                
+                # Display the map
+                folium_static(route_map, width=None, height=500)
+                
+                # Store results in session state for potential future use
+                st.session_state['last_result'] = result
+                st.session_state['last_city'] = start_city
+                
+            except Exception as e:
+                st.error(f"An error occurred while calculating the route: {str(e)}")
+                st.error("Please check your addresses and try again.")
+
+else:
+    # Show instructions when no calculation has been performed
+    st.info("👆 Enter your start and destination addresses in the sidebar to calculate the safest route.")
+    
     st.markdown("""
-        <div class="header">
-            <h1>🛣️ Safe Route Planner</h1>
-            <p>Find the safest routes in Leeds & Birmingham</p>
-        </div>
-    """, unsafe_allow_html=True)
+    ## How it works
     
-    # Input Panel
-    with st.container():
-        st.markdown('<div class="input-panel">', unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            start_address = st.text_input(
-                "📍 Start Address", 
-                placeholder="Enter starting location (Leeds or Birmingham)",
-                key="start_input"
-            )
-        
-        with col2:
-            end_address = st.text_input(
-                "🎯 Destination Address", 
-                placeholder="Enter destination (same city as start)",
-                key="end_input"
-            )
-        
-        # Calculate button
-        if st.button("Calculate Safe Route", key="calculate_btn"):
-            if not start_address or not end_address:
-                st.error('Please provide both start and end addresses')
-            else:
-                # Using fixed risk weight of 0.5 since slider is removed
-                calculate_route_function(start_address, end_address, 0.5)
-        
-        # Connect section
-        st.markdown("""
-            <div class="connect-section">
-                <p class="connect-text">Want to connect with me or learn more about this project?</p>
-                <a href="https://www.linkedin.com/in/adediran-adeyemi-17103b114/  " target="_blank" class="linkedin-btn">
-                    <svg class="linkedin-icon" viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px;">
-                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                    </svg>
-                    Connect on LinkedIn
-                </a>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    This application helps you find safer routes in Leeds and Birmingham by:
     
-    # Results Panel
-    if st.session_state.route_calculated and st.session_state.route_result:
-        display_results()
-
-def calculate_route_function(start_address, end_address, risk_weight):
-    """Function to calculate route with progress indicators"""
+    1. **Analyzing Crime Data**: Using historical crime statistics to identify high-risk areas
+    2. **Route Optimization**: Balancing travel time with safety considerations
+    3. **Visual Comparison**: Showing both fastest and safest routes on an interactive map
     
-    with st.spinner('🔍 Geocoding addresses...'):
-        # Geocode start address
-        start_lat, start_lng = get_lat_lng(start_address)
-        
-        if not start_lat or not start_lng:
-            st.error(f'Could not find location for start address: {start_address}')
-            return
-        
-        time.sleep(0.1)  # Rate limiting
-        
-        # Geocode end address
-        end_lat, end_lng = get_lat_lng(end_address)
-        
-        if not end_lat or not end_lng:
-            st.error(f'Could not find location for end address: {end_address}')
-            return
+    ### Features:
+    - 🗺️ Interactive maps with route visualization
+    - 📊 Detailed route metrics and comparison
+    - 🛡️ Risk assessment based on real crime data
+    - ⚖️ Adjustable balance between speed and safety
     
-    # Check if in supported area
-    start_in_area, start_city = is_in_supported_area(start_lat, start_lng)
-    end_in_area, end_city = is_in_supported_area(end_lat, end_lng)
+    ### Supported Areas:
+    - **Leeds**: Full city coverage with real-time route planning
+    - **Birmingham**: Comprehensive network analysis and safety scoring
     
-    if not start_in_area:
-        st.error(f'Start address is not in Leeds or Birmingham (found coordinates: {start_lat:.4f}, {start_lng:.4f})')
-        return
-    
-    if not end_in_area:
-        st.error(f'End address is not in Leeds or Birmingham (found coordinates: {end_lat:.4f}, {end_lng:.4f})')
-        return
-    
-    if start_city != end_city:
-        st.error(f'Both addresses must be in the same city. Start is in {start_city.title()}, end is in {end_city.title()}')
-        return
-    
-    with st.spinner(f'🗺️ Calculating optimal routes in {start_city.title()}...'):
-        # Get appropriate network
-        if start_city == 'leeds':
-            network = cached_data['leeds_network']
-        else:
-            network = cached_data['birmingham_network']
-        
-        try:
-            # Calculate routes
-            result = calculate_route_improved(network, (start_lat, start_lng), (end_lat, end_lng), risk_weight)
-            
-            # Generate map
-            map_obj = generate_route_map(network, result, start_lat, start_lng, end_lat, end_lng)
-            
-            # Store results in session state
-            st.session_state.route_result = result
-            st.session_state.map_data = {
-                'map': map_obj,
-                'start_lat': start_lat,
-                'start_lng': start_lng,
-                'end_lat': end_lat,
-                'end_lng': end_lng,
-                'city': start_city.title()
-            }
-            st.session_state.route_calculated = True
-            
-            st.success('✅ Routes calculated successfully!')
-            st.rerun()
-            
-        except Exception as e:
-            st.error(f'An error occurred while calculating the route: {str(e)}')
-
-def display_results():
-    """Display the route calculation results"""
-    result = st.session_state.route_result
-    map_data = st.session_state.map_data
-    
-    st.markdown('<div class="results-panel">', unsafe_allow_html=True)
-    st.markdown("## 📊 Route Analysis")
-    
-    # Stats in columns
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.markdown(f"""
-            <div class="stat-card">
-                <h3>Fastest Route</h3>
-                <div class="value">{result['fastest_time']/60:.1f}</div>
-                <div class="subtext">minutes</div>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-            <div class="stat-card">
-                <h3>Safest Route</h3>
-                <div class="value">{result['safest_time']/60:.1f}</div>
-                <div class="subtext">{result['time_difference']/60:.1f} minutes longer</div>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-            <div class="stat-card">
-                <h3>Safety Improvement</h3>
-                <div class="value">{result['risk_reduction']*100:.1f}%</div>
-                <div class="subtext">risk reduction</div>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    # Display map
-    st.markdown("### 🗺️ Route Map")
-    folium_static(map_data['map'], width=1200, height=500)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-
-if __name__ == "__main__":
-    main()
+    *Start by entering your addresses in the sidebar to get personalized route recommendations.*
+    """)
